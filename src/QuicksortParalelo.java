@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 public class QuicksortParalelo extends Thread {
     private int[] v;
     private int inicio, fim, max_threads, nivel, min_numeros;
@@ -14,20 +16,35 @@ public class QuicksortParalelo extends Thread {
         this.min_numeros = min_numeros;
     }
 
+    public void run() {
+        this.quickSort(this.v, this.inicio, this.fim);
+    }
+
     private void quickSort(int[] v, int i, int fim) {
-        if(this.fim > inicio) {
-            //Chamada da rotina que ira dividir o vetor em 3 partes.
-            int indexPivo = dividir(this.getV(), this.inicio, this.fim);
-      /* Chamada recursiva para redivisao do vetor de elementos menores
-        que o pivô. */
-            quickSort(this.v, this.inicio, indexPivo - 1);
-      /* Chamada recursiva para redivisao do vetor de elementos maiores
-        que o pivô. */
-            quickSort(this.v, indexPivo + 1, this.fim);
+        if(this.fim > inicio && this.nivel <= this.max_threads) {
+            int indexPivo = dividi_em_tres(this.getV(), this.inicio, this.fim);
+
+            int menorPivo = indexPivo - 1;
+            int maiorPivo = indexPivo + 1;
+
+            QuicksortParalelo quickSortMenor = new QuicksortParalelo(this.v, this.inicio, menorPivo, this.max_threads, this.nivel + 1, this.min_numeros);
+            QuicksortParalelo quickSortMaior = new QuicksortParalelo(this.v, maiorPivo, this.fim, this.max_threads, this.nivel + 1, this.min_numeros);
+
+            quickSortMenor.start();
+            quickSortMaior.start();
+
+            try {
+                quickSortMenor.join();
+                quickSortMaior.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            QuicksortSequencial.quickSort(v, this.inicio, this.fim);
         }
     }
 
-    private int dividir(int[] vetor, int inicio, int fim) {
+    private int dividi_em_tres(int[] vetor, int inicio, int fim) {
         int pivo, pontEsq, pontDir = fim;
         pontEsq = inicio + 1;
         pivo = vetor[inicio];
