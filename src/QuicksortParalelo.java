@@ -1,46 +1,61 @@
-import java.util.Arrays;
+import java.util.concurrent.Semaphore;
 
 public class QuicksortParalelo extends Thread {
     private int[] v;
     private int inicio, fim, max_threads, nivel, min_numeros;
+    private Semaphore mutex;
     public QuicksortParalelo(int[] v,
                              int inicio,
                              int fim,
                              int max_threads,
                              int nivel,
-                             int min_numeros) {
+                             int min_numeros,
+                             Semaphore mutex) {
         this.inicio = inicio;
+        this.v = v;
         this.fim = fim;
         this.max_threads = max_threads;
         this.nivel = nivel;
         this.min_numeros = min_numeros;
+        this.mutex = mutex;
     }
 
     public void run() {
         this.quickSort(this.v, this.inicio, this.fim);
     }
 
-    private void quickSort(int[] v, int i, int fim) {
-        if(this.fim > inicio && this.nivel <= this.max_threads) {
-            int indexPivo = dividi_em_tres(this.getV(), this.inicio, this.fim);
+    private void quickSort(int[] v, int inicio, int fim) {
+        if(fim > inicio) {
+            if (this.nivel <= this.max_threads) {
+                int indexPivo;
 
-            int menorPivo = indexPivo - 1;
-            int maiorPivo = indexPivo + 1;
+                try {
+                    mutex.acquire();
+                    indexPivo = dividi_em_tres(v, inicio, fim);
+                    mutex.release();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
 
-            QuicksortParalelo quickSortMenor = new QuicksortParalelo(this.v, this.inicio, menorPivo, this.max_threads, this.nivel + 1, this.min_numeros);
-            QuicksortParalelo quickSortMaior = new QuicksortParalelo(this.v, maiorPivo, this.fim, this.max_threads, this.nivel + 1, this.min_numeros);
+                int menorPivo = indexPivo - 1;
+                int maiorPivo = indexPivo + 1;
 
-            quickSortMenor.start();
-            quickSortMaior.start();
+                QuicksortParalelo quickSortMenor = new QuicksortParalelo(v, inicio, menorPivo, this.max_threads, this.nivel + 1, this.min_numeros, mutex);
+                QuicksortParalelo quickSortMaior = new QuicksortParalelo(v, maiorPivo, fim, this.max_threads, this.nivel + 1, this.min_numeros, mutex);
 
-            try {
-                quickSortMenor.join();
-                quickSortMaior.join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                quickSortMenor.start();
+                quickSortMaior.start();
+
+                try {
+                    quickSortMenor.join();
+                    quickSortMaior.join();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+            } else {
+                QuicksortSequencial.quickSort(v, inicio, fim);
             }
-
-            QuicksortSequencial.quickSort(v, this.inicio, this.fim);
         }
     }
 

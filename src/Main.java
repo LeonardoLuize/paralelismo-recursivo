@@ -1,19 +1,25 @@
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.Semaphore;
 
 public class Main {
     public static void main(String[] args) {
         int totalProcessadores = Runtime.getRuntime().availableProcessors();
-        int[] vetor = new int[10];
-        Random random = new Random();
+        Semaphore mutex = new Semaphore(1);
 
-        for (int i = 0; i < vetor.length; i++){
-            vetor[i] = random.nextInt(50);
-        }
+        testQuickSort(totalProcessadores, 10, mutex);
 
-        System.out.println(Arrays.toString(vetor));
+        testQuickSort(totalProcessadores, 15, mutex);
+    }
 
-        QuicksortParalelo quickSort = new QuicksortParalelo(vetor, 0, vetor.length, totalProcessadores, 0, 10);
+    static void testQuickSort(int totalProcessadores, int tamanho_array, Semaphore mutex){
+        System.out.println("\n");
+        int[] vetor = generate_array_by_index(tamanho_array);
+
+        System.out.println("Array desordenado: " + Arrays.toString(vetor));
+
+        long t0 = System.currentTimeMillis();
+        QuicksortParalelo quickSort = new QuicksortParalelo(vetor, 0, vetor.length - 1, totalProcessadores, 0, 10, mutex);
 
         quickSort.start();
 
@@ -23,6 +29,20 @@ public class Main {
             throw new RuntimeException(e);
         }
 
-        System.out.println(Arrays.toString(vetor));
+        long t1 = System.currentTimeMillis();
+
+        System.out.println("Array ordenado: " + Arrays.toString(vetor));
+        System.out.println("Tempo: " + (t1 - t0) + "ms");
+    }
+
+    static int[] generate_array_by_index(int index){
+        int[] vetor = new int[index];
+        Random random = new Random();
+
+        for (int i = 0; i < vetor.length; i++){
+            vetor[i] = random.nextInt(100);
+        }
+
+        return vetor;
     }
 }
